@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统安全登录</title>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0f2f5; }
+        .login-card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 300px; }
+        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        #message { color: #d9534f; font-size: 14px; margin-top: 10px; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <h2>用户登录</h2>
+        <input type="text" id="username" placeholder="用户名">
+        <input type="password" id="password" placeholder="密码">
+        <button onclick="doLogin()">登录</button>
+        <p id="message"></p>
+    </div>
+
+    <script>
+        async function doLogin() {
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            const msg = document.getElementById('message');
+            msg.innerText = "正在验证...";
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user, pass })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    document.body.innerHTML = "<h1 style='text-align:center;margin-top:20%'>恭喜，登录成功！</h1>";
+                } else {
+                    msg.innerText = data.message;
+                }
+            } catch (e) {
+                msg.innerText = "连接服务器失败";
+            }
+        }
+    </script>
+</body>
+</html>
