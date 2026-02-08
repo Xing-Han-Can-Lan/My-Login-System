@@ -13,6 +13,9 @@ export default async function handler(req, res) {
 
   const { user, pass } = req.body;
 
+    // 在这里加一行，方便在 Vercel Logs 里看到输入
+  console.log("收到登录请求:", user, "密码长度:", pass.length);
+
   // 1. 查找用户是否存在
   const { data: userData, error } = await supabase
     .from('users')
