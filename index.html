@@ -78,17 +78,17 @@
             loader.style.display = 'block';
 
             try {
-                // 从 Supabase 获取最新的一条 MSFT 新闻
+                // 从 Supabase 获取最新的一条 CRM 新闻
                 const { data, error } = await supabaseClient
                     .from('stock_news')
                     .select('*')
-                    .eq('stock_symbol', 'MSFT')
+                    .eq('stock_symbol', 'CRM')
                     .order('created_at', { ascending: false })
                     .limit(1);
 
                 if (error) throw error;
 
-                let newsHtml = '<div class="news-box"><h3>今日微软 (MSFT) 重要新闻</h3>';
+                let newsHtml = '<div class="news-box"><h3>今日CRM重要新闻</h3>';
                 
                 if (data && data.length > 0) {
                     const items = JSON.parse(data[0].content);
