@@ -8,7 +8,7 @@ export default async function handler(req, res) {
   const genAI = new GoogleGenerativeAI(GEMINI_KEY);
 
   try {
-    const STOCK_SYMBOL = 'CRM';
+    const STOCK_SYMBOL = 'MSFT';
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(today.getDate() - 1);
@@ -38,7 +38,7 @@ export default async function handler(req, res) {
     try {
       // 默认尝试使用 flash 1.5
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      const prompt = `Summarize these CRM news into max 3 points. Each point one Chinese sentence with its URL. Return ONLY JSON: {"items": [{"text": "...", "url": "..."}]} News: ${JSON.stringify(newsInput)}`;
+      const prompt = `Summarize these MSFT news into max 3 points. Each point one Chinese sentence with its URL. Return ONLY JSON: {"items": [{"text": "...", "url": "..."}]} News: ${JSON.stringify(newsInput)}`;
       
       const result = await model.generateContent(prompt);
       const responseText = result.response.text();
