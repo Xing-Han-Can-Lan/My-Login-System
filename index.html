@@ -4,16 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>系统安全登录</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0f2f5; }
+        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0f2f5; margin: 0; }
         .login-card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 300px; }
         input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
         button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
         #message { color: #d9534f; font-size: 14px; margin-top: 10px; text-align: center; }
+        /* 新闻卡片样式 */
+        .news-box { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); width: 80%; max-width: 500px; text-align: left; }
+        .news-item { margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .news-item:last-child { border-bottom: none; }
+        .news-link { color: #007bff; text-decoration: none; font-size: 13px; font-weight: bold; }
     </style>
 </head>
 <body>
-    <div class="login-card">
+    <div class="login-card" id="login-area">
         <h2>用户登录</h2>
         <input type="text" id="username" placeholder="用户名">
         <input type="password" id="password" placeholder="密码">
@@ -22,6 +28,11 @@
     </div>
 
     <script>
+        // 1. 初始化 Supabase 客户端
+        const SUPABASE_URL = 'https://wtadkhlpdwhlbdjbaafc.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0YWRraGxwZHdobGJkamJhYWZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA1MzA0MDMsImV4cCI6MjA4NjEwNjQwM30.FIpa7AHUS8A7nh2dFxvNDJBIZugtPmz_o5NhBz-NgT0';
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
         async function doLogin() {
             const user = document.getElementById('username').value;
             const pass = document.getElementById('password').value;
@@ -37,12 +48,67 @@
                 const data = await res.json();
 
                 if (data.success) {
-                    document.body.innerHTML = "<h1 style='text-align:center;margin-top:20%'>恭喜，登录成功！</h1>";
+                    // 登录成功：先显示恭喜讯息
+                    document.body.innerHTML = `
+                        <div id="content-area" style="text-align:center;">
+                            <h1 id="welcome-msg">恭喜，登录成功！</h1>
+                            <div id="news-loader" style="color: #666; display:none;">正在为您准备今日微软简报...</div>
+                        </div>
+                    `;
+
+                    // 停顿 1 秒后开始加载新闻
+                    setTimeout(fetchAndShowNews, 1000);
                 } else {
                     msg.innerText = data.message;
                 }
             } catch (e) {
                 msg.innerText = "连接服务器失败";
+            }
+        }
+
+        async function fetchAndShowNews() {
+            const welcomeMsg = document.getElementById('welcome-msg');
+            const loader = document.getElementById('news-loader');
+            
+            // 切换文案
+            welcomeMsg.style.fontSize = '24px';
+            welcomeMsg.style.marginTop = '20px';
+            loader.style.display = 'block';
+
+            try {
+                // 从 Supabase 获取最新的一条 MSFT 新闻
+                const { data, error } = await supabase
+                    .from('stock_news')
+                    .select('*')
+                    .eq('stock_symbol', 'MSFT')
+                    .order('created_at', { ascending: false })
+                    .limit(1);
+
+                if (error) throw error;
+
+                let newsHtml = '<div class="news-box"><h3>今日微软 (MSFT) 重要新闻</h3>';
+                
+                if (data && data.length > 0) {
+                    const items = JSON.parse(data[0].content);
+                    items.forEach(item => {
+                        newsHtml += `
+                            <div class="news-item">
+                                <p style="margin: 5px 0;">${item.text}</p>
+                                <a class="news-link" href="${item.url}" target="_blank">阅读原文 →</a>
+                            </div>`;
+                    });
+                } else {
+                    newsHtml += '<p>暂无重要新闻</p>';
+                }
+                
+                newsHtml += '</div>';
+                
+                // 替换页面内容为新闻卡片
+                document.getElementById('content-area').innerHTML = newsHtml;
+                
+            } catch (err) {
+                console.error(err);
+                loader.innerText = "新闻加载失败，请检查数据库连接。";
             }
         }
     </script>
