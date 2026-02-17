@@ -31,7 +31,9 @@
         // 1. 初始化 Supabase 客户端
         const SUPABASE_URL = 'https://wtadkhlpdwhlbdjbaafc.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0YWRraGxwZHdobGJkamJhYWZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA1MzA0MDMsImV4cCI6MjA4NjEwNjQwM30.FIpa7AHUS8A7nh2dFxvNDJBIZugtPmz_o5NhBz-NgT0';
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // 之后代码中引用的 supabase 也要统一改为 supabaseClient
+
 
         async function doLogin() {
             const user = document.getElementById('username').value;
@@ -77,7 +79,7 @@
 
             try {
                 // 从 Supabase 获取最新的一条 MSFT 新闻
-                const { data, error } = await supabase
+                const { data, error } = await supabaseClient
                     .from('stock_news')
                     .select('*')
                     .eq('stock_symbol', 'MSFT')
