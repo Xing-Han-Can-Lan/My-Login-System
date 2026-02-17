@@ -3,116 +3,196 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>系统安全登录</title>
+    <title>AI 投资助手</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0f2f5; margin: 0; }
-        .login-card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 300px; }
-        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-        button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        #message { color: #d9534f; font-size: 14px; margin-top: 10px; text-align: center; }
-        /* 新闻卡片样式 */
-        .news-box { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); width: 80%; max-width: 500px; text-align: left; }
-        .news-item { margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-        .news-item:last-child { border-bottom: none; }
-        .news-link { color: #007bff; text-decoration: none; font-size: 13px; font-weight: bold; }
+        :root { --primary: #007bff; --bg: #f4f7f6; --text: #333; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; padding: 20px; margin: 0; }
+        .card { background: white; padding: 2rem; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); width: 100%; max-width: 420px; text-align: center; transition: all 0.3s; }
+        h2, h3 { margin-top: 0; color: #1a1a1a; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
+        button { width: 100%; padding: 12px; margin: 8px 0; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 15px; transition: opacity 0.2s; }
+        .btn-main { background: var(--primary); color: white; }
+        .btn-sub { background: #6e6e73; color: white; }
+        .btn-back { background: transparent; border: 1px solid #ddd; color: #666; }
+        button:active { opacity: 0.8; }
+        .list-container { margin: 15px 0; max-height: 300px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; }
+        .list-item { padding: 15px; border-bottom: 1px solid #eee; text-align: left; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .list-item:last-child { border-bottom: none; }
+        .list-item:hover { background: #f9f9f9; }
+        .news-card { text-align: left; background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid var(--primary); }
+        .news-text { font-size: 14px; margin-bottom: 5px; line-height: 1.4; }
+        .news-link { font-size: 12px; color: var(--primary); text-decoration: none; font-weight: bold; }
+        #loader { font-size: 14px; color: #666; margin: 10px 0; }
     </style>
 </head>
 <body>
-    <div class="login-card" id="login-area">
-        <h2>用户登录</h2>
+
+<div class="card" id="app">
+    <div id="login-view">
+        <h2>系统安全登录</h2>
         <input type="text" id="username" placeholder="用户名">
         <input type="password" id="password" placeholder="密码">
-        <button onclick="doLogin()">登录</button>
-        <p id="message"></p>
+        <button class="btn-main" onclick="doLogin()">登录</button>
+        <p id="login-msg" style="color: #d9534f; font-size: 13px;"></p>
     </div>
+</div>
 
-    <script>
-        // 1. 初始化 Supabase 客户端
-        const SUPABASE_URL = 'https://wtadkhlpdwhlbdjbaafc.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0YWRraGxwZHdobGJkamJhYWZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA1MzA0MDMsImV4cCI6MjA4NjEwNjQwM30.FIpa7AHUS8A7nh2dFxvNDJBIZugtPmz_o5NhBz-NgT0';
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        // 之后代码中引用的 supabase 也要统一改为 supabaseClient
+<script>
+    // --- 配置区 ---
+    const SUPABASE_URL = 'https://wtadkhlpdwhlbdjbaafc.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0YWRraGxwZHdobGJkamJhYWZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA1MzA0MDMsImV4cCI6MjA4NjEwNjQwM30.FIpa7AHUS8A7nh2dFxvNDJBIZugtPmz_o5NhBz-NgT0';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+    const app = document.getElementById('app');
 
-        async function doLogin() {
-            const user = document.getElementById('username').value;
-            const pass = document.getElementById('password').value;
-            const msg = document.getElementById('message');
-            msg.innerText = "正在验证...";
+    // --- 1. 登录逻辑 ---
+    async function doLogin() {
+        const user = document.getElementById('username').value;
+        const pass = document.getElementById('password').value;
+        const msg = document.getElementById('login-msg');
+        
+        try {
+            const res = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user, pass })
+            });
+            const data = await res.json();
 
-            try {
-                const res = await fetch('/api/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user, pass })
-                });
-                const data = await res.json();
-
-                if (data.success) {
-                    // 登录成功：先显示恭喜讯息
-                    document.body.innerHTML = `
-                        <div id="content-area" style="text-align:center;">
-                            <h1 id="welcome-msg">恭喜，登录成功！</h1>
-                            <div id="news-loader" style="color: #666; display:none;">正在为您准备今日微软简报...</div>
-                        </div>
-                    `;
-
-                    // 停顿 1 秒后开始加载新闻
-                    setTimeout(fetchAndShowNews, 1000);
-                } else {
-                    msg.innerText = data.message;
-                }
-            } catch (e) {
-                msg.innerText = "连接服务器失败";
+            if (data.success) {
+                app.innerHTML = "<h2>🎉 登录成功</h2>";
+                setTimeout(showMainMenu, 500); // 0.5s 延迟跳转
+            } else {
+                msg.innerText = data.message || "登录失败";
             }
+        } catch (e) {
+            msg.innerText = "服务器连接异常";
         }
+    }
 
-        async function fetchAndShowNews() {
-            const welcomeMsg = document.getElementById('welcome-msg');
-            const loader = document.getElementById('news-loader');
-            
-            // 切换文案
-            welcomeMsg.style.fontSize = '24px';
-            welcomeMsg.style.marginTop = '20px';
-            loader.style.display = 'block';
+    // --- 2. 主菜单 ---
+    function showMainMenu() {
+        app.innerHTML = `
+            <h3>操作菜单</h3>
+            <button class="btn-main" onclick="showEntryView()">📈 数据录入</button>
+            <button class="btn-sub" onclick="showStockListView()">📖 数据读取</button>
+        `;
+    }
 
-            try {
-                // 从 Supabase 获取最新的一条 MSFT 新闻
-                const { data, error } = await supabaseClient
-                    .from('stock_news')
-                    .select('*')
-                    .eq('stock_symbol', 'MSFT')
-                    .order('created_at', { ascending: false })
-                    .limit(1);
+    // --- 3. 数据录入界面 ---
+    function showEntryView() {
+        app.innerHTML = `
+            <h3>数据录入</h3>
+            <p style="font-size:13px; color:#666;">支持美股、港股、A股 (如: AAPL, 700.HK, 600519.SH)</p>
+            <input type="text" id="symbol-input" placeholder="输入股票代码">
+            <button class="btn-main" onclick="handleEntrySubmit()">开始抓取总结</button>
+            <div id="loader"></div>
+            <button class="btn-back" onclick="showMainMenu()">返回主菜单</button>
+        `;
+    }
 
-                if (error) throw error;
+    async function handleEntrySubmit() {
+        const symbol = document.getElementById('symbol-input').value.trim().toUpperCase();
+        if (!symbol) return alert("请输入代码");
+        
+        const loader = document.getElementById('loader');
+        loader.innerText = "🚀 正在云端处理新闻，请稍候...";
 
-                let newsHtml = '<div class="news-box"><h3>今日MSFT重要新闻</h3>';
-                
-                if (data && data.length > 0) {
-                    const items = JSON.parse(data[0].content);
-                    items.forEach(item => {
-                        newsHtml += `
-                            <div class="news-item">
-                                <p style="margin: 5px 0;">${item.text}</p>
-                                <a class="news-link" href="${item.url}" target="_blank">阅读原文 →</a>
-                            </div>`;
+        try {
+            const res = await fetch(`/api/fetch-news?symbol=${symbol}`);
+            const data = await res.json();
+
+            if (data.success) {
+                let html = `<h4>录入结果预览 (${data.date})</h4>`;
+                if (data.data && data.data.length > 0) {
+                    data.data.forEach(item => {
+                        html += `<div class="news-card"><div class="news-text">${item.text}</div></div>`;
                     });
+                    html += `<p style="font-size:12px; color:green;">✅ 已成功录入 ${data.data.length} 条新闻</p>`;
                 } else {
-                    newsHtml += '<p>暂无重要新闻</p>';
+                    html += `<p style="color:#666;">📅 今日无重要新闻，已记录录入日期。</p>`;
                 }
-                
-                newsHtml += '</div>';
-                
-                // 替换页面内容为新闻卡片
-                document.getElementById('content-area').innerHTML = newsHtml;
-                
-            } catch (err) {
-                console.error(err);
-                loader.innerText = "新闻加载失败，请检查数据库连接。";
+                html += `<button class="btn-main" onclick="showEntryView()">继续录入</button>`;
+                html += `<button class="btn-back" onclick="showMainMenu()">返回主菜单</button>`;
+                app.innerHTML = html;
+            } else {
+                throw new Error();
             }
+        } catch (e) {
+            loader.innerText = "❌ 录入失败，请检查后端或 API 配额。";
         }
+    }
+
+    // --- 4. 数据读取 - 股票列表 ---
+    async function showStockListView() {
+        app.innerHTML = "<h3>读取列表中...</h3>";
+        
+        // 获取所有去重后的股票代码并排序
+        const { data, error } = await supabaseClient.from('stock_news').select('stock_symbol');
+        if (error) return alert("读取失败");
+
+        const symbols = [...new Set(data.map(i => i.stock_symbol))].sort();
+
+        let html = `<h3>选择股票代码</h3><div class="list-container">`;
+        symbols.forEach(s => {
+            html += `<div class="list-item" onclick="showDateListView('${s}')"><span>${s}</span> <span>→</span></div>`;
+        });
+        html += `</div><button class="btn-back" onclick="showMainMenu()">返回主菜单</button>`;
+        app.innerHTML = symbols.length ? html : "<h3>暂无数据</h3><button class="btn-back" onclick="showMainMenu()">返回主菜单</button>";
+    }
+
+    // --- 5. 数据读取 - 日期列表 ---
+    async function showDateListView(symbol) {
+        app.innerHTML = `<h3>${symbol} - 历史日期</h3>`;
+        const { data, error } = await supabaseClient
+            .from('stock_news')
+            .select('created_date')
+            .eq('stock_symbol', symbol)
+            .order('created_date', { ascending: false });
+
+        let html = `<div class="list-container">`;
+        data.forEach(row => {
+            html += `<div class="list-item" onclick="showNewsDetail('${symbol}', '${row.created_date}')"><span>${row.created_date}</span> <span>👁️</span></div>`;
+        });
+        html += `</div><button class="btn-sub" onclick="showStockListView()">返回上一级</button>
+                 <button class="btn-back" onclick="showMainMenu()">返回主菜单</button>`;
+        app.innerHTML = html;
+    }
+
+    // --- 6. 数据读取 - 新闻详情 ---
+    async function showNewsDetail(symbol, date) {
+        app.innerHTML = "<h3>正在读取详情...</h3>";
+        const { data, error } = await supabaseClient
+            .from('stock_news')
+            .select('content')
+            .eq('stock_symbol', symbol)
+            .eq('created_date', date)
+            .single();
+
+        let html = `<h3>${symbol} 新闻</h3><p style="color:#666; font-size:13px;">日期：${date}</p>`;
+        const items = JSON.parse(data.content);
+
+        if (items && items.length > 0) {
+            items.forEach(item => {
+                html += `
+                    <div class="news-card">
+                        <div class="news-text">${item.text}</div>
+                        <a href="${item.url}" target="_blank" class="news-link">阅读原文 →</a>
+                    </div>`;
+            });
+        } else {
+            html += `<div class="news-card" style="border-left-color:#ccc; color:#999;">该日期下无新闻记录</div>`;
+        }
+
+        html += `<button class="btn-sub" onclick="showDateListView('${symbol}')">返回上一级</button>
+                 <button class="btn-back" onclick="showMainMenu()">返回主菜单</button>`;
+        app.innerHTML = html;
+    }
+</script>
+
+</body>
+</html>
     </script>
 </body>
 </html>
