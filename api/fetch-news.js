@@ -6,6 +6,11 @@ export default async function handler(req, res) {
   // 1. 初始化配置（从 Vercel 环境变量读取）
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_KEY);
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_KEY);
+// 确保模型名称没有拼写错误，或者尝试使用不带版本号的简洁名 
+  const model = genAI.getGenerativeModel({ 
+    model: "gemini-1.5-flash",
+  });
 
   try {
     const STOCK_SYMBOL = 'MSFT';
