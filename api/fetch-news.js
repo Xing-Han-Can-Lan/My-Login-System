@@ -4,7 +4,7 @@ import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
   // 1. 初始化配置（从 Vercel 环境变量读取）
-  const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+  const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_KEY);
 
   try {
