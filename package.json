@@ -3,6 +3,7 @@
     "@supabase/supabase-js": "^2.39.0",
     "@supabase/supabase-js": "latest",
     "@google/generative-ai": "latest",
+    "@google/generative-ai": "^0.21.0",
     "node-fetch": "2"
   }
 }
