@@ -70,12 +70,15 @@
     }
 
     function showMainMenu() {
-        app.innerHTML = `
-            <h3>操作菜单</h3>
-            <button class="btn-main" onclick="showEntryView()">📈 数据录入</button>
-            <button class="btn-sub" onclick="showStockListView()">📖 数据读取</button>
-        `;
-    }
+    app.innerHTML = `
+        <h3>操作菜单</h3>
+        <button class="btn-main" onclick="showEntryView()">📈 数据录入</button>
+        <button class="btn-sub" onclick="showStockListView()">📖 数据读取</button>
+        <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
+        <div id="db-info" style="font-size:12px; color:#888;">正在加载存储状态...</div>
+    `;
+    updateDatabaseUsage(); // 切换到主菜单时更新用量
+}
 
     function showEntryView() {
         app.innerHTML = `
@@ -168,6 +171,31 @@
         html += `<button class="btn-sub" onclick="showDateListView('${symbol}')">返回上一级</button>`;
         app.innerHTML = html;
     }
+
+    async function updateDatabaseUsage() {
+    try {
+        // 调用我们刚刚在 SQL Editor 创建的 RPC 函数
+        const { data, error } = await supabaseClient.rpc('get_database_size');
+        
+        const infoDiv = document.getElementById('db-info');
+        if (error) throw error;
+
+        // 假设免费版限制是 500MB
+        const limit = 500;
+        const usage = data.toFixed(2);
+        const percent = ((usage / limit) * 100).toFixed(1);
+
+        infoDiv.innerHTML = `
+            存储使用量: ${usage} MB / ${limit} MB (${percent}%)
+            <div style="width:100%; background:#eee; height:4px; border-radius:2px; margin-top:5px;">
+                <div style="width:${percent}%; background:${percent > 80 ? '#d9534f' : '#28a745'}; height:100%; border-radius:2px;"></div>
+            </div>
+        `;
+    } catch (e) {
+        console.error("无法获取容量信息:", e);
+        document.getElementById('db-info').innerText = "容量信息获取失败";
+    }
+}
 </script>
 </body>
 </html>
