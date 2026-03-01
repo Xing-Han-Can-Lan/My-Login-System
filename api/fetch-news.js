@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
@@ -8,59 +8,81 @@ export default async function handler(req, res) {
   const genAI = new GoogleGenerativeAI(GEMINI_KEY);
 
   try {
+    // 【优点保留 & 增强】：从查询参数获取股票代码，默认为 MSFT
     const STOCK_SYMBOL = (req.query.symbol || 'MSFT').toUpperCase();
-    const dateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' });
-    const isNonUS = /(.HK|SH.|SZ.|.SI)$/.test(STOCK_SYMBOL);
+    
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+    
+    const fromDate = yesterday.toISOString().split('T')[0];
+    const toDate = today.toISOString().split('T')[0];
+    
+    // 【核心改动】：生成东八区日期字符串 YYYY-MM-DD
+    const dateStr = today.toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' }); 
 
-    // 【关键修复点】：使用 gemini-2.0-flash 代替 1.5
-    // 如果 2.0 依然报错，请尝试使用 "gemini-1.5-flash-002"
-    const model = genAI.getGenerativeModel({ 
-      model: "gemini-2.0-flash", 
-      safetySettings: [
-        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
-        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-      ]
-    });
+    // 1. 获取 Finnhub 原始新闻
+    const newsRes = await fetch(
+      `https://finnhub.io/api/v1/company-news?symbol=${STOCK_SYMBOL}&from=${fromDate}&to=${toDate}&token=${FINNHUB_KEY}`
+    );
+    const rawNews = await newsRes.json();
 
     let finalItems = [];
 
-    if (isNonUS) {
-      // 港股/A股：利用 2.0 强大的推理能力直接获取
-      const prompt = `Search and summarize the top 3 news for stock ${STOCK_SYMBOL} on date ${dateStr}. 
-      Return strictly as JSON: {"items":[{"text":"Chinese summary","url":"..."}]}`;
-      
-      const result = await model.generateContent(prompt);
-      const text = result.response.text();
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) finalItems = JSON.parse(jsonMatch[0]).items;
+    // 如果没新闻，记录空内容，保留日期记录（满足你的新要求）
+    if (!Array.isArray(rawNews) || rawNews.length === 0) {
+      finalItems = []; 
     } else {
-      // 美股：Finnhub 逻辑 (保持不变)
-      // ... 之前的 Finnhub 逻辑 ...
+      // 只取前 8 条，避免超出 LLM token 限制
+      const newsInput = rawNews.slice(0, 8).map(n => ({ 
+        h: n.headline, 
+        u: n.url 
+      }));
+
+      // 2. 尝试调用 AI 进行总结（保留你原有的优秀 AI 逻辑）
+      try {
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        // 动态注入 STOCK_SYMBOL，确保总结准确
+        const prompt = `Summarize these ${STOCK_SYMBOL} news into max 3 points. Each point one Chinese sentence with its URL. Return ONLY JSON: {"items": [{"text": "...", "url": "..."}]} News: ${JSON.stringify(newsInput)}`;
+        
+        const result = await model.generateContent(prompt);
+        const responseText = result.response.text();
+        const jsonStr = responseText.replace(/```json|```/g, '').trim();
+        const parsed = JSON.parse(jsonStr);
+        finalItems = parsed.items;
+      } catch (aiErr) {
+        console.error("AI 总结失败，启用兜底方案:", aiErr.message);
+        finalItems = newsInput.slice(0, 3).map(n => ({
+          text: n.h,
+          url: n.u
+        }));
+      }
     }
 
-    // 写入数据库
-    if (finalItems.length > 0) {
-      await supabase.from('stock_news').upsert([{
+    // 3. 【核心改动】：写入 Supabase (使用 upsert 实现按日期覆盖)
+    const { error: dbError } = await supabase.from('stock_news').upsert([
+      {
         stock_symbol: STOCK_SYMBOL,
         content: JSON.stringify(finalItems),
         source_urls: finalItems.map(i => i.url),
-        created_date: dateStr
-      }], { onConflict: 'stock_symbol,created_date' });
-    }
+        created_date: dateStr // 显式存入东八区日期
+      }
+    ], { 
+      onConflict: 'stock_symbol,created_date' // 冲突时（同股同日）自动执行更新
+    });
 
-    return res.status(200).json({ success: true, data: finalItems });
+    if (dbError) throw dbError;
+
+    return res.status(200).json({ 
+      success: true, 
+      symbol: STOCK_SYMBOL,
+      date: dateStr,
+      count: finalItems.length,
+      data: finalItems 
+    });
 
   } catch (err) {
-    console.error("DEBUG INFO:", err.message);
-    // 如果依然 404，返回更具体的建议
-    if (err.message.includes('404')) {
-      return res.status(200).json({ 
-        success: false, 
-        error: "模型未找到，请检查您的 API Key 是否支持 Gemini 2.0 或联系管理员切换模型 ID" 
-      });
-    }
-    return res.status(500).json({ success: false, error: err.message });
+    console.error("API Error:", err);
+    return res.status(500).json({ error: err.message });
   }
 }
