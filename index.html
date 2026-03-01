@@ -68,7 +68,7 @@
             msg.innerText = "服务器连接异常";
         }
     }
-
+   
     function showMainMenu() {
     app.innerHTML = `
         <h3>操作菜单</h3>
@@ -78,12 +78,12 @@
         <div id="db-info" style="font-size:12px; color:#888;">正在加载存储状态...</div>
     `;
     updateDatabaseUsage(); // 切换到主菜单时更新用量
-}
+    }
 
     function showEntryView() {
         app.innerHTML = `
             <h3>数据录入</h3>
-            <p style="font-size:12px; color:#666;">支持美股、港股、A股 (如: NVDA, 700.HK)</p>
+            <p style="font-size:12px; color:#666;">支持美股、港股、A股、<b>新股 (如: NVDA, 700.HK, D05.SI, D05.SI)</b></p>
             <input type="text" id="symbol-input" placeholder="输入股票代码">
             <button class="btn-main" id="submit-btn" onclick="handleEntrySubmit()">开始抓取总结</button>
             <div id="loader"></div>
