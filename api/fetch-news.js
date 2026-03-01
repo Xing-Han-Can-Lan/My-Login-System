@@ -19,7 +19,7 @@ export default async function handler(req, res) {
     if (isNonUS) {
       // --- 针对港股、A股、新股的新逻辑 ---
       try {
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         // 直接让 AI 依靠其联网/知识库总结最新动态（不依赖 Finnhub）
         const prompt = `你是一个专业的金融分析师。请搜索并列举股票代码 "${STOCK_SYMBOL}" 在 ${dateStr} 当天或最近的3条重要新闻或公告。
         请用中文总结，并必须返回严格的 JSON 格式：{"items": [{"text": "总结内容", "url": "来源链接"}]}`;
@@ -50,7 +50,7 @@ export default async function handler(req, res) {
       if (Array.isArray(rawNews) && rawNews.length > 0) {
         const newsInput = rawNews.slice(0, 8).map(n => ({ h: n.headline, u: n.url }));
         try {
-          const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+          const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
           const prompt = `Summarize these ${STOCK_SYMBOL} news into max 3 points. Each point one Chinese sentence with its URL. Return ONLY JSON: {"items": [{"text": "...", "url": "..."}]} News: ${JSON.stringify(newsInput)}`;
           
           const result = await model.generateContent(prompt);
