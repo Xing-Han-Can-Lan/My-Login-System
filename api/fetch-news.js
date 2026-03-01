@@ -8,42 +8,21 @@ export default async function handler(req, res) {
   const genAI = new GoogleGenerativeAI(GEMINI_KEY);
 
   try {
-    // 【优点保留 & 增强】：从查询参数获取股票代码，默认为 MSFT
     const STOCK_SYMBOL = (req.query.symbol || 'MSFT').toUpperCase();
-    
     const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(today.getDate() - 1);
-    
-    const fromDate = yesterday.toISOString().split('T')[0];
-    const toDate = today.toISOString().split('T')[0];
-    
-    // 【核心改动】：生成东八区日期字符串 YYYY-MM-DD
     const dateStr = today.toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' }); 
 
-    // 1. 获取 Finnhub 原始新闻
-    const newsRes = await fetch(
-      `https://finnhub.io/api/v1/company-news?symbol=${STOCK_SYMBOL}&from=${fromDate}&to=${toDate}&token=${FINNHUB_KEY}`
-    );
-    const rawNews = await newsRes.json();
-
+    // 判断是否为非美股
+    const isNonUS = /(.HK|SH.|SZ.|.SI)$/.test(STOCK_SYMBOL);
     let finalItems = [];
 
-    // 如果没新闻，记录空内容，保留日期记录（满足你的新要求）
-    if (!Array.isArray(rawNews) || rawNews.length === 0) {
-      finalItems = []; 
-    } else {
-      // 只取前 8 条，避免超出 LLM token 限制
-      const newsInput = rawNews.slice(0, 8).map(n => ({ 
-        h: n.headline, 
-        u: n.url 
-      }));
-
-      // 2. 尝试调用 AI 进行总结（保留你原有的优秀 AI 逻辑）
+    if (isNonUS) {
+      // --- 针对港股、A股、新股的新逻辑 ---
       try {
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        // 动态注入 STOCK_SYMBOL，确保总结准确
-        const prompt = `Summarize these ${STOCK_SYMBOL} news into max 3 points. Each point one Chinese sentence with its URL. Return ONLY JSON: {"items": [{"text": "...", "url": "..."}]} News: ${JSON.stringify(newsInput)}`;
+        // 直接让 AI 依靠其联网/知识库总结最新动态（不依赖 Finnhub）
+        const prompt = `你是一个专业的金融分析师。请搜索并列举股票代码 "${STOCK_SYMBOL}" 在 ${dateStr} 当天或最近的3条重要新闻或公告。
+        请用中文总结，并必须返回严格的 JSON 格式：{"items": [{"text": "总结内容", "url": "来源链接"}]}`;
         
         const result = await model.generateContent(prompt);
         const responseText = result.response.text();
@@ -51,24 +30,49 @@ export default async function handler(req, res) {
         const parsed = JSON.parse(jsonStr);
         finalItems = parsed.items;
       } catch (aiErr) {
-        console.error("AI 总结失败，启用兜底方案:", aiErr.message);
-        finalItems = newsInput.slice(0, 3).map(n => ({
-          text: n.h,
-          url: n.u
-        }));
+        console.error("非美股获取失败:", aiErr.message);
+        finalItems = []; // 失败则返回空，至少保证记录了日期
+      }
+
+    } else {
+      // --- 原有的美股逻辑（完全保留，不做变动） ---
+      const yesterday = new Date(today);
+      yesterday.setDate(today.getDate() - 1);
+      const fromDate = yesterday.toISOString().split('T')[0];
+      const toDate = today.toISOString().split('T')[0];
+
+      const newsRes = await fetch(
+        `https://finnhub.io/api/v1/company-news?symbol=${STOCK_SYMBOL}&from=${fromDate}&to=${toDate}&token=${FINNHUB_KEY}`
+      );
+      const rawNews = await newsRes.json();
+
+      if (Array.isArray(rawNews) && rawNews.length > 0) {
+        const newsInput = rawNews.slice(0, 8).map(n => ({ h: n.headline, u: n.url }));
+        try {
+          const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+          const prompt = `Summarize these ${STOCK_SYMBOL} news into max 3 points. Each point one Chinese sentence with its URL. Return ONLY JSON: {"items": [{"text": "...", "url": "..."}]} News: ${JSON.stringify(newsInput)}`;
+          
+          const result = await model.generateContent(prompt);
+          const responseText = result.response.text();
+          const jsonStr = responseText.replace(/```json|```/g, '').trim();
+          const parsed = JSON.parse(jsonStr);
+          finalItems = parsed.items;
+        } catch (aiErr) {
+          finalItems = newsInput.slice(0, 3).map(n => ({ text: n.h, url: n.u }));
+        }
       }
     }
 
-    // 3. 【核心改动】：写入 Supabase (使用 upsert 实现按日期覆盖)
+    // 写入 Supabase (复用你原有的成功写入逻辑)
     const { error: dbError } = await supabase.from('stock_news').upsert([
       {
         stock_symbol: STOCK_SYMBOL,
         content: JSON.stringify(finalItems),
         source_urls: finalItems.map(i => i.url),
-        created_date: dateStr // 显式存入东八区日期
+        created_date: dateStr
       }
     ], { 
-      onConflict: 'stock_symbol,created_date' // 冲突时（同股同日）自动执行更新
+      onConflict: 'stock_symbol,created_date'
     });
 
     if (dbError) throw dbError;
@@ -77,12 +81,11 @@ export default async function handler(req, res) {
       success: true, 
       symbol: STOCK_SYMBOL,
       date: dateStr,
-      count: finalItems.length,
       data: finalItems 
     });
 
   } catch (err) {
     console.error("API Error:", err);
-    return res.status(500).json({ error: err.message });
+    return res.status(200).json({ success: false, error: err.message });
   }
 }
