@@ -19,7 +19,7 @@ export default async function handler(req, res) {
 
     // 配置 Gemini 模型参数
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash",
+      model: "gemini-2.0-flash",
       // 【关键修复 1】：放宽安全限制，防止新闻内容被误拦截
       safetySettings: [
         { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
