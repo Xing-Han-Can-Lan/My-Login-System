@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import bcrypt from 'bcryptjs' // 用以哈希加盐密码对比
 
 // 初始化 Supabase 客户端
 const supabase = createClient(
@@ -32,8 +33,10 @@ export default async function handler(req, res) {
     return res.status(200).json({ success: false, message: '密码错误超8次，账号已锁定！请联系管理员！' });
   }
 
-  // 3. 验证密码
-  if (userData.password === pass) {
+  // 3. 验证密码（哈希加盐）
+  const isMatch = await bcrypt.compare(pass, userData.password);
+
+  if (isMatch) {
     // 登录成功：重置错误次数
     await supabase
       .from('users')
