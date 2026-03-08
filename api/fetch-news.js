@@ -56,7 +56,7 @@ export default async function handler(req, res) {
     if (newsInput.length > 0) {
       // --- 调用 AI 进行总结 (保留原有优点) ---
       try {
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
         const prompt = `Summarize these ${STOCK_SYMBOL} news into max 3 points. Each point one Chinese sentence with its URL. Return ONLY JSON: {"items": [{"text": "...", "url": "..."}]} News: ${JSON.stringify(newsInput)}`;
         
         const result = await model.generateContent(prompt);
