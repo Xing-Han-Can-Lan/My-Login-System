@@ -12,25 +12,43 @@ export default async function handler(req, res) {
     const today = new Date();
     const dateStr = today.toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' });
 
+// ... 前面代码保持不变 ...
+
     // --- 逻辑判断：选择数据源 ---
     let rawNews = [];
-    const isNonUS = STOCK_SYMBOL.includes('.HK') || 
-                    STOCK_SYMBOL.includes('SH.') || 
-                    STOCK_SYMBOL.includes('SZ.') || 
-                    STOCK_SYMBOL.includes('.SI');
+    
+    // 1. 自动转换 A 股格式 (将 SH.601398 转换为 601398.SS)
+    let marketauxSymbol = STOCK_SYMBOL;
+    if (STOCK_SYMBOL.startsWith('SH.')) {
+        marketauxSymbol = STOCK_SYMBOL.replace('SH.', '') + '.SS';
+    } else if (STOCK_SYMBOL.startsWith('SZ.')) {
+        marketauxSymbol = STOCK_SYMBOL.replace('SZ.', '') + '.SZ';
+    }
+
+    const isNonUS = marketauxSymbol.includes('.HK') || 
+                    marketauxSymbol.includes('.SS') || 
+                    marketauxSymbol.includes('.SZ') || 
+                    marketauxSymbol.includes('.SI');
+
+    console.log(`[调试] 原始输入: ${STOCK_SYMBOL}, 转换后: ${marketauxSymbol}, 是否非美股: ${isNonUS}`);
 
     if (isNonUS) {
-      // 使用 Marketaux 获取 港/A/新 股市新闻
-      // Marketaux 的 symbols 格式通常为 700.HK, 601398.SS 等
-      // 注意：Marketaux 免费版建议增加 filter_entities=true 提高相关性
-      const marketauxRes = await fetch(
-        `https://api.marketaux.com/v1/news/all?symbols=${STOCK_SYMBOL}&filter_entities=true&language=en,zh&api_token=${MARKETAUX_KEY}`
-      );
+      const url = `https://api.marketaux.com/v1/news/all?symbols=${marketauxSymbol}&filter_entities=true&language=en,zh&api_token=${MARKETAUX_KEY}`;
+      console.log(`[调试] 正在请求 Marketaux URL: ${url}`);
+
+      const marketauxRes = await fetch(url);
       const result = await marketauxRes.json();
-      // Marketaux 返回的数据结构在 data 字段中
+      
+      // 关键：在日志中打印 API 返回的状态
+      if (result.error) {
+          console.error(`[错误] Marketaux API 报错:`, result.error);
+      }
+      console.log(`[调试] Marketaux 返回新闻条数: ${result.data ? result.data.length : 0}`);
+      
       rawNews = result.data || [];
     } else {
-      // 保持原有 Finnhub 逻辑获取美股新闻
+      // ... 原有 Finnhub 逻辑 ...
+      console.log(`[调试] 正在请求 Finnhub, 代码: ${STOCK_SYMBOL}`);
       const yesterday = new Date(today);
       yesterday.setDate(today.getDate() - 1);
       const fromDate = yesterday.toISOString().split('T')[0];
@@ -40,6 +58,7 @@ export default async function handler(req, res) {
         `https://finnhub.io/api/v1/company-news?symbol=${STOCK_SYMBOL}&from=${fromDate}&to=${toDate}&token=${FINNHUB_KEY}`
       );
       rawNews = await newsRes.json();
+      // ... 
     }
 
     // --- 数据标准化处理 ---
