@@ -33,7 +33,8 @@ export default async function handler(req, res) {
     console.log(`[调试] 原始输入: ${STOCK_SYMBOL}, 转换后: ${marketauxSymbol}, 是否非美股: ${isNonUS}`);
 
     if (isNonUS) {
-      const url = `https://api.marketaux.com/v1/news/all?symbols=${marketauxSymbol}&filter_entities=true&language=en,zh&api_token=${MARKETAUX_KEY}`;
+      //const url = `https://api.marketaux.com/v1/news/all?symbols=${marketauxSymbol}&filter_entities=true&language=en,zh&api_token=${MARKETAUX_KEY}`;
+      const url = `https://api.marketaux.com/v1/news/all?symbols=${marketauxSymbol}&language=en,zh&api_token=${MARKETAUX_KEY}`;
       console.log(`[调试] 正在请求 Marketaux URL: ${url}`);
 
       const marketauxRes = await fetch(url);
