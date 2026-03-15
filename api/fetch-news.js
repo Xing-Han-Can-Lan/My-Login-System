@@ -47,7 +47,7 @@ export default async function handler(req, res) {
     const isNonUS = marketauxSymbol.includes('.HK') || 
                     marketauxSymbol.includes('.SS') || 
                     marketauxSymbol.includes('.SZ') || 
-                    marketauxSymbol.includes('.SGX');
+                    marketauxSymbol.includes('.SI');
 
     console.log(`[调试] 原始输入: ${STOCK_SYMBOL}, 转换后: ${marketauxSymbol}, 是否非美股: ${isNonUS}`);
 
