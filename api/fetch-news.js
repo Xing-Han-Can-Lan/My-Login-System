@@ -11,10 +11,29 @@ export default async function handler(req, res) {
     const STOCK_SYMBOL = (req.query.symbol || 'MSFT').toUpperCase();
     const today = new Date();
     const dateStr = today.toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' });
+    
+// --- 【新增：缓存检查逻辑】 ---
+    console.log(`[检查缓存] 股票: ${STOCK_SYMBOL}, 日期: ${dateStr}`);
+    const { data: cachedData, error: fetchError } = await supabase
+      .from('stock_news')
+      .select('content')
+      .eq('stock_symbol', STOCK_SYMBOL)
+      .eq('created_date', dateStr)
+      .maybeSingle(); // 获取单条记录，如果没有也不报错
 
-// ... 前面代码保持不变 ...
+    if (cachedData && cachedData.content) {
+      console.log(`[缓存命中] 直接从 Supabase 返回数据`);
+      return res.status(200).json({ 
+        success: true, 
+        symbol: STOCK_SYMBOL,
+        date: dateStr,
+        from_cache: true, // 标记数据来自缓存
+        data: JSON.parse(cachedData.content) 
+      });
+    }
+    // ----------------------------
 
-    // --- 逻辑判断：选择数据源 ---
+    // --- 逻辑判断：选择数据源 (仅在缓存未命中时执行) ---
     let rawNews = [];
     
     // 1. 自动转换 A 股格式 (将 SH.601398 转换为 601398.SS)
