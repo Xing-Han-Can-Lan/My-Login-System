@@ -1,7 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import fetch from 'node-fetch';
-import yahooFinance from 'yahoo-finance2';
+//import yahooFinance from 'yahoo-finance2';
+import { default as yahooFinance } from 'yahoo-finance2';
 
 export default async function handler(req, res) {
   const { SUPABASE_URL, SUPABASE_ANON_KEY, GEMINI_KEY, FINNHUB_KEY, MARKETAUX_KEY } = process.env;
@@ -80,22 +81,28 @@ export default async function handler(req, res) {
       rawNews = await newsRes.json();
       // ... 
     }
-  // --- 在这里插入补救逻辑 ---
+
+// --- Yahoo Finance 补救逻辑 ---
     if (!Array.isArray(rawNews) || rawNews.length === 0) {
       console.log(`[补救] 主 API 无结果，尝试 Yahoo Finance: ${marketauxSymbol}`);
       try {
-        // 使用转换后的 marketauxSymbol (已含 .SI, .HK 等后缀)
-        const searchResult = await yahooFinance.search(marketauxSymbol, { newsCount: 5 });
-        if (searchResult.news && searchResult.news.length > 0) {
+        // 确保使用转换后的符号，如 D05.SI
+        const searchResult = await yahooFinance.search(marketauxSymbol, { 
+          newsCount: 5,
+          quotesCount: 1 // 也可以顺便带出报价信息
+        });
+        
+        if (searchResult && searchResult.news && searchResult.news.length > 0) {
           rawNews = searchResult.news.map(n => ({
-            title: n.title, // Yahoo 返回的是 title
+            title: n.title,
             url: n.link
           }));
         }
       } catch (yErr) {
-        console.error("Yahoo Finance 补救失败:", yErr.message);
+        console.error("Yahoo Finance 补救执行失败:", yErr.message);
       }
     }
+
     // -----------------------
     // --- 数据标准化处理 ---
     // 因为两个 API 返回字段名不同，这里统一格式为 { h: headline, u: url }
