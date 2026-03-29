@@ -86,6 +86,26 @@ export default async function handler(req, res) {
     if (!Array.isArray(rawNews) || rawNews.length === 0) {
       console.log(`[补救] 主 API 无结果，尝试 Yahoo Finance: ${marketauxSymbol}`);
       try {
+        if (typeof yf.search !== 'function') {
+          throw new Error('yahoo-finance2.search 不存在（模块加载异常）');
+          }
+        const searchResult = await yf.search(marketauxSymbol, { 
+          newsCount: 5
+          });
+        if (searchResult?.news?.length > 0) {
+          rawNews = searchResult.news.map(n => ({
+            title: n.title,
+            url: n.link
+            }));
+          }
+      } catch (yErr) {
+        console.error("Yahoo Finance 补救执行失败:", yErr.message);
+        }
+      }
+   /**
+    if (!Array.isArray(rawNews) || rawNews.length === 0) {
+      console.log(`[补救] 主 API 无结果，尝试 Yahoo Finance: ${marketauxSymbol}`);
+      try {
         // 确保使用转换后的符号，如 D05.SI
         const searchResult = await yf.search(marketauxSymbol, { 
           newsCount: 5
@@ -100,7 +120,7 @@ export default async function handler(req, res) {
       } catch (yErr) {
         console.error("Yahoo Finance 补救执行失败:", yErr.message);
       }
-    }
+    } **/
 
    
     // --- 数据标准化处理 ---
