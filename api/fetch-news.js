@@ -1,9 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import fetch from 'node-fetch';
-import yahooFinanceModule from 'yahoo-finance2';
-
-const yahooFinance = yahooFinanceModule.default || yahooFinanceModule;
+import yahooFinance from 'yahoo-finance2';
 
 export default async function handler(req, res) {
   const { SUPABASE_URL, SUPABASE_ANON_KEY, GEMINI_KEY, FINNHUB_KEY, MARKETAUX_KEY } = process.env;
@@ -86,7 +84,6 @@ export default async function handler(req, res) {
     // --- Yahoo Finance 补救逻辑 ---
     if (!Array.isArray(rawNews) || rawNews.length === 0) {
       console.log(`[补救] 主 API 无结果，尝试 Yahoo Finance: ${marketauxSymbol}`);
-      try {
         // 确保使用转换后的符号，如 D05.SI
         const searchResult = await yahooFinance.search(marketauxSymbol, { 
           newsCount: 5,
