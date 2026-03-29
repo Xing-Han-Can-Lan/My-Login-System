@@ -1,8 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import fetch from 'node-fetch';
-import yahooFinance from 'yahoo-finance2';
-const yf = yahooFinance?.default || yahooFinance;
+//import yahooFinance from 'yahoo-finance2';
+//const yf = yahooFinance?.default || yahooFinance;
+const yahooFinanceModule = await import('yahoo-finance2');
+const yf = yahooFinanceModule.default;
 
 export default async function handler(req, res) {
   const { SUPABASE_URL, SUPABASE_ANON_KEY, GEMINI_KEY, FINNHUB_KEY, MARKETAUX_KEY } = process.env;
