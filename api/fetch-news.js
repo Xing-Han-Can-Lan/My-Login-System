@@ -87,8 +87,7 @@ export default async function handler(req, res) {
       try {
         // 确保使用转换后的符号，如 D05.SI
         const searchResult = await yahooFinance.search(marketauxSymbol, { 
-          newsCount: 5,
-          quotesCount: 1 // 也可以顺便带出报价信息
+          newsCount: 5
         });
         
         if (searchResult && searchResult.news && searchResult.news.length > 0) {
