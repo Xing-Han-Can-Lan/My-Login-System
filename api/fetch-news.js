@@ -84,6 +84,7 @@ export default async function handler(req, res) {
     // --- Yahoo Finance 补救逻辑 ---
     if (!Array.isArray(rawNews) || rawNews.length === 0) {
       console.log(`[补救] 主 API 无结果，尝试 Yahoo Finance: ${marketauxSymbol}`);
+      try {
         // 确保使用转换后的符号，如 D05.SI
         const searchResult = await yahooFinance.search(marketauxSymbol, { 
           newsCount: 5,
