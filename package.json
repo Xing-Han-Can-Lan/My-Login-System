@@ -7,6 +7,5 @@
     "@google/generative-ai": "latest",
     "node-fetch": "2",
     "bcryptjs": "^2.4.3",
-    "yahoo-finance2": "^2.11.0"
   }
 }
