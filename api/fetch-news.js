@@ -1,10 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import fetch from 'node-fetch';
-//import yahooFinance from 'yahoo-finance2';
-//const yf = yahooFinance?.default || yahooFinance;
-const yahooFinanceModule = await import('yahoo-finance2');
-const yf = yahooFinanceModule.default;
 
 export default async function handler(req, res) {
   const { SUPABASE_URL, SUPABASE_ANON_KEY, GEMINI_KEY, FINNHUB_KEY, MARKETAUX_KEY } = process.env;
@@ -84,46 +80,33 @@ export default async function handler(req, res) {
       // ... 
     }
 
-    // --- Yahoo Finance 补救逻辑 ---
+    // --- Google News RSS 补救逻辑 (替代原 Yahoo Finance) ---
     if (!Array.isArray(rawNews) || rawNews.length === 0) {
-      console.log(`[补救] 主 API 无结果，尝试 Yahoo Finance: ${marketauxSymbol}`);
+      console.log(`[补救] 主 API 无结果，尝试 Google News RSS: ${marketauxSymbol}`);
       try {
-        if (typeof yf.search !== 'function') {
-          throw new Error('yahoo-finance2.search 不存在（模块加载异常）');
-          }
-        const searchResult = await yf.search(marketauxSymbol, { 
-          newsCount: 5
-          });
-        if (searchResult?.news?.length > 0) {
-          rawNews = searchResult.news.map(n => ({
-            title: n.title,
-            url: n.link
-            }));
-          }
-      } catch (yErr) {
-        console.error("Yahoo Finance 补救执行失败:", yErr.message);
-        }
-      }
-   /**
-    if (!Array.isArray(rawNews) || rawNews.length === 0) {
-      console.log(`[补救] 主 API 无结果，尝试 Yahoo Finance: ${marketauxSymbol}`);
-      try {
-        // 确保使用转换后的符号，如 D05.SI
-        const searchResult = await yf.search(marketauxSymbol, { 
-          newsCount: 5
-        });
-        
-        if (searchResult && searchResult.news && searchResult.news.length > 0) {
-          rawNews = searchResult.news.map(n => ({
-            title: n.title,
-            url: n.link
-          }));
-        }
-      } catch (yErr) {
-        console.error("Yahoo Finance 补救执行失败:", yErr.message);
-      }
-    } **/
+        // 构建 Google News RSS URL (搜索该股票代码)
+        const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(marketauxSymbol)}&hl=en-SG&gl=SG&ceid=SG:en`;
+        const rssRes = await fetch(rssUrl);
+        const rssText = await rssRes.text();
 
+        // 简易正则解析 XML 中的 <item> 标签获取标题和链接
+        const items = rssText.match(/<item>[\s\S]*?<\/item>/g) || [];
+        
+        if (items.length > 0) {
+          rawNews = items.slice(0, 5).map(item => {
+            const title = item.match(/<title>([\s\S]*?)<\/title>/)?.[1] || "No Title";
+            const link = item.match(/<link>([\s\S]*?)<\/link>/)?.[1] || "";
+            return {
+              title: title.replace(/&amp;/g, '&'), // 简单处理转义字符
+              url: link
+            };
+          });
+          console.log(`[补救成功] Google News 获取到 ${rawNews.length} 条新闻`);
+        }
+      } catch (gErr) {
+        console.error("Google News 补救执行失败:", gErr.message);
+      }
+    }
    
     // --- 数据标准化处理 ---
     // 因为两个 API 返回字段名不同，这里统一格式为 { h: headline, u: url }
