@@ -6,6 +6,6 @@
     "@supabase/supabase-js": "latest",
     "@google/generative-ai": "latest",
     "node-fetch": "2",
-    "bcryptjs": "^2.4.3",
+    "bcryptjs": "^2.4.3"
   }
 }
